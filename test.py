@@ -5,13 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
 
-# Load model
-loaded_model = joblib.load("/full/path/to/random_forest_model.pkl")
-
-# Sidebar menu
-menu = st.sidebar.selectbox("Navigasi", ["Dashboard", "Prediksi", "Visualisasi"])
-
-if menu == "Dashboard":
+# --- Fungsi: Dashboard ---
+def show_dashboard():
     st.title("Dashboard Prediksi Cuaca")
     st.markdown("""
     Selamat datang di sistem prediksi kelas cuaca berbasis model *Random Forest*.
@@ -21,58 +16,41 @@ if menu == "Dashboard":
     - Melihat **Visualisasi** data atau hasil prediksi.
     """)
 
-    # Load dataset tren cuaca
-    df = pd.read_csv("Dataset Tren Cuaca.csv")
+    try:
+        df = pd.read_csv("Dataset Tren Cuaca.csv")
+    except FileNotFoundError:
+        st.error("Dataset 'Dataset Tren Cuaca.csv' tidak ditemukan.")
+        return
 
-    # Ubah kolom 'date' menjadi format datetime
     df['date'] = pd.to_datetime(df['date'], dayfirst=True)
-
-    # Tambahkan kolom bulan
     df['month'] = df['date'].dt.month
 
     st.subheader("Visualisasi Tren Cuaca")
 
-    # Daftar parameter yang bisa divisualisasikan
     parameter_options = [
-        "temp_average",
-        "temp_max",
-        "temp_min",
-        "curah_hujan",
-        "penyinaran_matahari",
-        "tekanan_udara",
-        "kelembaban_average",
-        "kec_angin_average",
-        "kec_angin_high",
-        "arah_angin_most",
-        "arah_angin",
-        "weather_encoded"
+        "temp_average", "temp_max", "temp_min", "curah_hujan",
+        "penyinaran_matahari", "tekanan_udara", "kelembaban_average",
+        "kec_angin_average", "kec_angin_high", "arah_angin_most",
+        "arah_angin", "weather_encoded"
     ]
 
-    # Dropdown untuk memilih parameter
-    parameter = st.selectbox("Pilih Parameter Cuaca untuk Ditampilkan", parameter_options)
+    parameter = st.selectbox("Pilih Parameter Cuaca", parameter_options)
 
-    # Cek apakah kolom 'weather' tersedia, jika tidak map dari 'weather_encoded'
     if 'weather' not in df.columns and 'weather_encoded' in df.columns:
         df['weather'] = df['weather_encoded'].map({
-            0: 'CLOUDINESS',
-            1: 'RAIN',
-            2: 'THUNDERSTORM'
+            0: 'CLOUDINESS', 1: 'RAIN', 2: 'THUNDERSTORM'
         })
 
-    # Visualisasi data
     fig, ax = plt.subplots(figsize=(10, 6))
 
     if parameter == "weather_encoded":
-        # Hitung distribusi kategori weather_encoded berdasarkan bulan
         weather_monthly_dist = df.groupby(['month', 'weather_encoded']).size().unstack(fill_value=0)
-
-        # Visualisasi distribusi kategori weather_encoded berdasarkan bulan
         weather_monthly_dist.plot(kind='bar', stacked=True, ax=ax, color=['tab:blue', 'tab:orange', 'tab:green'])
-
         ax.set_title("Distribusi Weather Encoded per Bulan")
         ax.set_xlabel("Bulan")
         ax.set_ylabel("Frekuensi Kejadian")
-        ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], rotation=45)
+        ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], rotation=45)
 
         st.info("""
         **Keterangan Weather Encoded:**
@@ -80,16 +58,13 @@ if menu == "Dashboard":
         - 1 = Rain
         - 2 = Thunderstorm
         """)
-
     else:
-        # Visualisasi histogram stacked berdasarkan kelas cuaca
         weather_classes = df['weather'].unique()
-        colors = plt.cm.tab20.colors  # Maksimum 20 warna
-
+        colors = plt.cm.tab20.colors
         for i, weather in enumerate(sorted(weather_classes)):
             subset = df[df['weather'] == weather]
-            ax.hist(subset[parameter], bins=20, alpha=0.8, label=weather, stacked=True, color=colors[i % len(colors)])
-
+            ax.hist(subset[parameter], bins=20, alpha=0.8, label=weather,
+                    stacked=True, color=colors[i % len(colors)])
         ax.set_title(f"Distribusi {parameter.replace('_', ' ').title()} berdasarkan Kelas Cuaca")
         ax.set_xlabel(parameter.replace('_', ' ').title())
         ax.set_ylabel("Frekuensi")
@@ -97,33 +72,79 @@ if menu == "Dashboard":
         ax.grid(True)
 
     st.pyplot(fig)
-
-    # Tampilkan tabel data tren parameter
     st.subheader(f"Tabel Data Tren {parameter.replace('_', ' ').title()}")
     st.dataframe(df[['date', parameter]].sort_values(by='date').reset_index(drop=True))
 
+# --- Fungsi: Prediksi ---
+def show_prediction():
+    st.title("Prediksi Kelas Cuaca")
+    st.markdown("Masukkan data iklim untuk memprediksi kelas cuaca:")
 
-# Visualisasi
-elif menu == "Visualisasi":
-    st.title("Visualisasi Hasil Evaluasi Model dan Korelasi Cuaca")
+    try:
+        model = joblib.load("random_forest_model.pkl")
+    except FileNotFoundError:
+        st.error("Model 'random_forest_model.pkl' tidak ditemukan.")
+        return
 
-    st.subheader("1. Perbandingan Kinerja Semua MOdel")
-    image_nn = Image.open("Perbandingan Model.png")
-    st.image(image_nn, caption="Perbandingan Akurasi, Presisi, Recall, dan F1-Score 6 Model", use_container_width=True)
+    # Form input
+    temp_average = st.number_input("Suhu Rata-rata (°C)")
+    temp_max = st.number_input("Suhu Maksimum (°C)")
+    curah_hujan = st.number_input("Curah Hujan (mm)", min_value=0.0)
+    penyinaran_matahari = st.number_input("Penyinaran Matahari (%)")
+    kelembaban_average = st.number_input("Kelembaban Rata-rata (%)")
+    kec_angin_average = st.number_input("Kecepatan Angin Rata-rata (m/s)")
+    arah_angin_most = st.number_input("Arah Angin Paling Sering (°)")
+    arah_angin = st.number_input("Arah Angin Saat Ini (°)")
 
-    st.subheader("2. Confusion Matrix dari Masing-masing Model")
+    if st.button("Prediksi Kelas Cuaca"):
+        input_data = np.array([
+            temp_average, temp_max, curah_hujan, penyinaran_matahari,
+            kelembaban_average, kec_angin_average, arah_angin_most, arah_angin
+        ]).reshape(1, -1)
+
+        prediction = model.predict(input_data)
+        st.success(f"Kelas cuaca yang diprediksi: **{prediction[0]}**")
+
+# --- Fungsi: Visualisasi Evaluasi Model ---
+def show_visualization():
+    st.title("Visualisasi Evaluasi Model & Korelasi")
+
+    st.subheader("1. Perbandingan Kinerja Model")
+    try:
+        st.image(Image.open("Perbandingan Model.png"),
+                 caption="Perbandingan Akurasi, Presisi, Recall, dan F1-Score 6 Model",
+                 use_container_width=True)
+    except:
+        st.warning("Gambar 'Perbandingan Model.png' tidak ditemukan.")
+
+    st.subheader("2. Confusion Matrix")
     col1, col2 = st.columns(2)
-
     with col1:
-        st.image(Image.open("CM NN.png"), caption="Confusion Matrix - Neural Network", use_container_width=True)
-        st.image(Image.open("CM SVM.png"), caption="Confusion Matrix - SVM", use_container_width=True)
-        st.image(Image.open("CM NB.png"), caption="Confusion Matrix - Naive Bayes", use_container_width=True)
-
+        for name in ["CM NN.png", "CM SVM.png", "CM NB.png"]:
+            try:
+                st.image(Image.open(name), caption=name.split('.')[0], use_container_width=True)
+            except:
+                st.warning(f"Gambar '{name}' tidak ditemukan.")
     with col2:
-        st.image(Image.open("CM KNN.png"), caption="Confusion Matrix - KNN", use_container_width=True)
-        st.image(Image.open("CM RF.png"), caption="Confusion Matrix - Random Forest", use_container_width=True)
-        st.image(Image.open("CM DT.png"), caption="Confusion Matrix - Decision Tree", use_container_width=True)
+        for name in ["CM KNN.png", "CM RF.png", "CM DT.png"]:
+            try:
+                st.image(Image.open(name), caption=name.split('.')[0], use_container_width=True)
+            except:
+                st.warning(f"Gambar '{name}' tidak ditemukan.")
 
-    st.subheader("3. Analisis Korelasi Antara Parameter Cuaca")
-    st.image(Image.open("Korelasi Spearman.png"), caption="Heatmap Korelasi Spearman antar Parameter Cuaca", use_container_width=True)
-    st.image(Image.open("Peringkat Korelasi.png"), caption="Peringkat Pengaruh Parameter terhadap Target", use_container_width=True)
+    st.subheader("3. Korelasi Parameter Cuaca")
+    for name in ["Korelasi Spearman.png", "Peringkat Korelasi.png"]:
+        try:
+            st.image(Image.open(name), caption=name.replace(".png", "").replace("_", " "), use_container_width=True)
+        except:
+            st.warning(f"Gambar '{name}' tidak ditemukan.")
+
+# --- Navigasi Menu ---
+menu = st.sidebar.selectbox("Navigasi", ["Dashboard", "Prediksi", "Visualisasi"])
+
+if menu == "Dashboard":
+    show_dashboard()
+elif menu == "Prediksi":
+    show_prediction()
+elif menu == "Visualisasi":
+    show_visualization()
