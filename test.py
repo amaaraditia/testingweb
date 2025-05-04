@@ -28,7 +28,7 @@ def show_dashboard():
 
     Silakan pilih menu di sidebar untuk:
     - Melakukan **Prediksi** berdasarkan input parameter iklim.
-    - Melihat **Visualisasi** data atau hasil prediksi.
+    - Melihat **Visualisasi** Confusion Matriks dan Hasil Korelasi
     """)
 
     try:
