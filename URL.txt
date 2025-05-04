@@ -1,1 +1,1 @@
-https://website-prediksi-cuaca.streamlit.app/
+https://prediksi-cuaca-capstone.streamlit.app/
