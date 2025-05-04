@@ -44,7 +44,7 @@ def show_dashboard():
 
     parameter_options = [
         "temp_average", "temp_max", "curah_hujan",
-        "penyinaran_matahari", "tekanan_udara", "kelembaban_average",
+        "penyinaran_matahari", "kelembaban_average",
         "kec_angin_average", "arah_angin_most",
         "arah_angin", "weather_encoded"
     ]
