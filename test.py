@@ -5,6 +5,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
 
+# --- Header dengan Menu Akun di Kanan Atas ---
+col_left, col_spacer, col_right = st.columns([4, 6, 2])
+with col_right:
+    akun = st.selectbox("👤 Akun", ["Admin", "Logout"], label_visibility="collapsed")
+    if akun == "Logout":
+        st.warning("Anda telah logout.")
+        st.stop()
+
+# --- Navigasi Menu di Sidebar ---
+menu = st.sidebar.selectbox("Navigasi", ["Dashboard", "Prediksi", "Visualisasi"])
+st.sidebar.markdown("---")
+if st.sidebar.button("🚪 Exit"):
+    st.sidebar.warning("Aplikasi ditutup.")
+    st.stop()
+
 # --- Fungsi: Dashboard ---
 def show_dashboard():
     st.title("Dashboard Prediksi Cuaca")
@@ -28,9 +43,9 @@ def show_dashboard():
     st.subheader("Visualisasi Tren Cuaca")
 
     parameter_options = [
-        "temp_average", "temp_max", "temp_min", "curah_hujan",
+        "temp_average", "temp_max", "curah_hujan",
         "penyinaran_matahari", "tekanan_udara", "kelembaban_average",
-        "kec_angin_average", "kec_angin_high", "arah_angin_most",
+        "kec_angin_average", "arah_angin_most",
         "arah_angin", "weather_encoded"
     ]
 
@@ -102,8 +117,19 @@ def show_prediction():
             kelembaban_average, kec_angin_average, arah_angin_most, arah_angin
         ]).reshape(1, -1)
 
-        prediction = model.predict(input_data)
-        st.success(f"Kelas cuaca yang diprediksi: **{prediction[0]}**")
+        prediction = model.predict(input_data)[0]
+
+        # Mapping kelas ke deskripsi
+        kelas_dict = {
+            0: "Cloudiness (Berawan)",
+            1: "Rain (Hujan)",
+            2: "Thunderstorm (Badai Petir)"
+        }
+
+        deskripsi_kelas = kelas_dict.get(prediction, "Tidak diketahui")
+        st.success(f"Kelas cuaca yang diprediksi: **{prediction} - {deskripsi_kelas}**")
+
+        st.caption("Keterangan:\n0 = Cloudiness (Berawan)\n1 = Rain (Hujan)\n2 = Thunderstorm (Badai Petir)")
 
 # --- Fungsi: Visualisasi Evaluasi Model ---
 def show_visualization():
@@ -139,9 +165,7 @@ def show_visualization():
         except:
             st.warning(f"Gambar '{name}' tidak ditemukan.")
 
-# --- Navigasi Menu ---
-menu = st.sidebar.selectbox("Navigasi", ["Dashboard", "Prediksi", "Visualisasi"])
-
+# --- Pemanggilan Menu ---
 if menu == "Dashboard":
     show_dashboard()
 elif menu == "Prediksi":
