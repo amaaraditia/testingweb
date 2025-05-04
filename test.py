@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 # Load model
-loaded_model = joblib.load("\random_forest_model.pkl")
+loaded_model = joblib.load("/full/path/to/random_forest_model.pkl")
 
 # Sidebar menu
 menu = st.sidebar.selectbox("Navigasi", ["Dashboard", "Prediksi", "Visualisasi"])
